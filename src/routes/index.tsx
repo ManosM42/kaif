@@ -5,13 +5,16 @@ import logo from "@/assets/kaif-logo.jpg";
 import lookbook from "@/assets/lookbook-hero.jpg";
 import { BarbedRing, BarbedWire } from "@/components/BarbedWire";
 import { ProductCard } from "@/components/ProductCard";
-import { PRODUCTS } from "@/lib/products";
+import { listProducts } from "@/lib/products.functions";
 
 export const Route = createFileRoute("/")({
+  loader: async () => (await listProducts()).products,
   component: Home,
 });
 
 function Home() {
+  const products = Route.useLoaderData();
+
   const heroRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
     target: heroRef,
@@ -28,7 +31,15 @@ function Home() {
   });
   const lbY = useTransform(lbProgress, [0, 1], [-80, 80]);
 
-  const featured = PRODUCTS.slice(0, 4);
+  if (products.length < 4) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-kaif-black px-4 text-center font-mono text-xs tracking-[0.3em] text-kaif-chrome-dim">
+        ADD AT LEAST 4 PRODUCTS IN ADMIN
+      </div>
+    );
+  }
+
+  const featured = products.slice(0, 4);
 
   return (
     <>
@@ -76,7 +87,6 @@ function Home() {
             width={520}
             height={280}
             className="breathe h-auto w-[68vw] max-w-[560px] select-none"
-            
           />
           <p className="mt-8 max-w-md text-center font-mono text-[11px] leading-relaxed tracking-[0.25em] text-kaif-chrome-dim">
             UNIFORM FOR THE DISAFFECTED · FABRICATED IN LIMITED RUNS

@@ -1,7 +1,8 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute, redirect, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { getAdminSession, logoutAdmin } from "@/lib/auth.functions";
 import { getLockStatus, setLockStatus } from "@/lib/site-settings.functions";
+
 
 export const Route = createFileRoute("/admin/")({
   beforeLoad: async () => {
@@ -60,9 +61,12 @@ function AdminDashboard() {
         </button>
       </div>
 
-      <p className="mt-10 font-mono text-xs text-kaif-chrome-dim">
-        Διαχείριση προϊόντων: έρχεται στο επόμενο βήμα.
-      </p>
+      <Link
+  to="/admin/products"
+  className="mt-10 inline-block border border-white/20 px-6 py-3 font-mono text-xs tracking-[0.2em] text-kaif-chrome-dim hover:border-kaif-toxic hover:text-kaif-toxic"
+>
+  ΔΙΑΧΕΙΡΙΣΗ ΠΡΟΪΟΝΤΩΝ →
+</Link>
     </div>
   );
 }

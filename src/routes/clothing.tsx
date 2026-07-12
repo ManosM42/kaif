@@ -4,9 +4,11 @@ import { useMemo, useState } from "react";
 import mensImg from "@/assets/men-split.jpg";
 import womensImg from "@/assets/women-split.jpg";
 import { ProductCard } from "@/components/ProductCard";
-import { PRODUCTS, type Product } from "@/lib/products";
+import { listProducts } from "@/lib/products.functions";
+import type { Product } from "@/lib/products";
 
 export const Route = createFileRoute("/clothing")({
+  loader: async () => (await listProducts()).products,
   head: () => ({
     meta: [
       { title: "Clothing — KAIF" },
@@ -30,17 +32,18 @@ const CATEGORIES = ["all", "outerwear", "tops", "bottoms", "accessories"] as con
 type Category = (typeof CATEGORIES)[number];
 
 function Clothing() {
+  const products = Route.useLoaderData();
   const [gender, setGender] = useState<Gender>(null);
   const [cat, setCat] = useState<Category>("all");
   const [selected, setSelected] = useState<Product | null>(null);
 
   const filtered = useMemo(() => {
-    return PRODUCTS.filter(
+    return products.filter(
       (p) =>
         (gender ? p.gender === gender || p.gender === "unisex" : true) &&
         (cat === "all" ? true : p.category === cat),
     );
-  }, [gender, cat]);
+  }, [gender, cat, products]);
 
   return (
     <>
@@ -113,11 +116,11 @@ function Clothing() {
                     className="cursor-pointer"
                   >
                     <ProductCard
-                      product={p}
-                      hoverImage={
-                        PRODUCTS[(PRODUCTS.indexOf(p) + 1) % PRODUCTS.length].image
-                      }
-                    />
+  product={p}
+  hoverImage={
+    products[(products.indexOf(p) + 1) % products.length]?.image
+  }
+/>
                   </motion.div>
                 ))}
               </AnimatePresence>
