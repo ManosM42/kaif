@@ -1,10 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getCookie } from "@tanstack/react-start/server";
 import { supabaseAdmin } from "./supabase-admin.server";
-import { verifySessionToken } from "./session.server";
+import { verifyAdminSession } from "./auth.functions";
 
 async function requireAdmin() {
-  const session = await verifySessionToken(getCookie("kaif_admin_session"));
+  const session = await verifyAdminSession();
   if (session?.role !== "admin") throw new Error("Unauthorized");
 }
 

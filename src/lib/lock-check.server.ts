@@ -1,5 +1,5 @@
 import { supabaseAdmin } from "./supabase-admin.server";
-import { verifySessionToken } from "./session.server";
+import { verifyAdminSession } from "./auth.functions";
 import kaifLogoUrl from "@/assets/kaif-logo.jpg?url";
 
 let cache: { locked: boolean; ts: number } | null = null;
@@ -33,8 +33,7 @@ export async function shouldBlockRequest(request: Request): Promise<boolean> {
   const url = new URL(request.url);
   if (ALLOWED_WHEN_LOCKED.some((p) => url.pathname.startsWith(p))) return false;
 
-  const token = getCookieValue(request.headers.get("cookie"), "kaif_admin_session");
-  const session = await verifySessionToken(token);
+  const session = await verifyAdminSession();
   if (session?.role === "admin") return false;
 
   return isLocked();
