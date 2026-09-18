@@ -26,7 +26,7 @@ export const loginAdmin = createServerFn({ method: "POST" })
 
     setCookie(COOKIE_NAME, token, {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
       maxAge: SESSION_TTL_MS / 1000,

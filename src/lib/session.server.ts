@@ -1,7 +1,7 @@
 const encoder = new TextEncoder();
 
 async function getKey() {
-  const secret = process.env.SESSION_SECRET!;
+  const secret = process.env.SESSION_SECRET || "default_secret_change_me_in_production";
   return crypto.subtle.importKey(
     "raw",
     encoder.encode(secret),
