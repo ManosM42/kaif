@@ -33,7 +33,7 @@ export async function shouldBlockRequest(request: Request): Promise<boolean> {
   const url = new URL(request.url);
   if (ALLOWED_WHEN_LOCKED.some((p) => url.pathname.startsWith(p))) return false;
 
-  const session = await verifyAdminSession();
+  const session = await verifyAdminSession(request);
   if (session?.role === "admin") return false;
 
   return isLocked();
