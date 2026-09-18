@@ -9,7 +9,23 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 type CartItemInput = { productId: string; size: string; quantity: number };
 
 export const createCheckoutSession = createServerFn({ method: "POST" })
-  .validator((data: { items: CartItemInput[] }) => data)
+  .validator((data: {
+    items: CartItemInput[];
+    customer: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      phone: string;
+    };
+    shipping: {
+      name: string;
+      address: string;
+      city: string;
+      postal_code: string;
+      country: string;
+      state: string;
+    };
+  }) => data)
   .handler(async ({ data }) => {
     if (!data.items.length) throw new Error("Το καλάθι είναι άδειο");
 
@@ -26,8 +42,8 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
     for (const item of data.items) {
       const product = products.find((p) => p.id === item.productId);
       if (!product) throw new Error(`Προϊόν δεν βρέθηκε: ${item.productId}`);
-      if (product.stock < item.quantity) {
-        throw new Error(`Ανεπαρκές απόθεμα για ${product.name}`);
+      if ((product.stocks[item.size] ?? 0) < item.quantity) {
+        throw new Error(`Ανεπαρκές απόθεμα για ${product.name} (${item.size})`);
       }
 
       line_items.push({
@@ -49,13 +65,30 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       mode: "payment",
       ui_mode: "embedded",
       line_items,
-      shipping_address_collection: {
-        allowed_countries: ["GR", "CY", "DE", "FR", "IT", "ES", "NL", "BE", "AT"],
+      customer_email: data.customer.email,
+      shipping: {
+        name: data.shipping.name,
+        address: {
+          line1: data.shipping.address,
+          city: data.shipping.city,
+          postal_code: data.shipping.postal_code,
+          country: data.shipping.country,
+          state: data.shipping.state,
+        },
       },
-      phone_number_collection: { enabled: true },
       return_url: `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       metadata: {
         cart: JSON.stringify(data.items),
+        customer_phone: data.customer.phone,
+        customer_first_name: data.customer.firstName,
+        customer_last_name: data.customer.lastName,
+        shipping_address: JSON.stringify({
+          address: data.shipping.address,
+          city: data.shipping.city,
+          postal_code: data.shipping.postal_code,
+          country: data.shipping.country,
+          state: data.shipping.state,
+        }),
       },
     });
 
@@ -105,8 +138,9 @@ export const finalizeOrder = createServerFn({ method: "POST" })
       .insert({
         stripe_session_id: session.id,
         customer_email: session.customer_details?.email ?? null,
-        customer_name: session.customer_details?.name ?? null,
-        shipping_address: session.customer_details?.address ?? null,
+        customer_name: ((`${session.metadata?.customer_first_name ?? ""} ${session.metadata?.customer_last_name ?? ""}`).trim()) || (session.customer_details?.name ?? null),
+        customer_phone: session.metadata?.customer_phone ?? null,
+        shipping_address: session.metadata?.shipping_address ? JSON.parse(session.metadata.shipping_address) : session.customer_details?.address ?? null,
         amount_total: (session.amount_total ?? 0) / 100,
         currency: session.currency ?? "eur",
         status: "paid",
@@ -135,12 +169,16 @@ export const finalizeOrder = createServerFn({ method: "POST" })
 
       await supabaseAdmin.from("order_items").insert(orderItemsRows);
 
-      // Μείωση αποθέματος (best-effort — δεν μπλοκάρει την παραγγελία αν αποτύχει)
+      // Μείωση αποθέματος ανά μέγεθος
       for (const item of cartItems) {
         const product = products?.find((p) => p.id === item.productId);
         if (!product) continue;
-        const newStock = Math.max(0, product.stock - item.quantity);
-        await supabaseAdmin.from("products").update({ stock: newStock }).eq("id", item.productId);
+        const currentStocks = product.stocks || {};
+        const updatedStocks = {
+          ...currentStocks,
+          [item.size]: Math.max(0, (currentStocks[item.size] ?? 0) - item.quantity),
+        };
+        await supabaseAdmin.from("products").update({ stocks: updatedStocks }).eq("id", item.productId);
       }
     }
 

@@ -19,7 +19,7 @@ function rowToProduct(row: any): Product {
     gender: row.gender,
     image: row.image_url ?? "",
     alt: row.alt ?? row.name,
-    stock: Number(row.stock ?? 0),
+    stocks: row.stocks ?? {},
   };
 }
 
@@ -46,7 +46,7 @@ export const createProduct = createServerFn({ method: "POST" })
     category: Product["category"];
     gender: Product["gender"];
     alt: string;
-    stock: number;
+    stocks: Record<string, number>;
     imageBase64: string;
     imageFileName: string;
   }) => data)
@@ -78,7 +78,7 @@ export const createProduct = createServerFn({ method: "POST" })
       category: data.category,
       gender: data.gender,
       alt: data.alt,
-      stock: data.stock,
+      stocks: data.stocks,
       image_url: publicUrlData.publicUrl,
     });
 
@@ -96,7 +96,7 @@ export const updateProduct = createServerFn({ method: "POST" })
     category: Product["category"];
     gender: Product["gender"];
     alt: string;
-    stock: number;
+    stocks: Record<string, number>;
     imageBase64?: string;
     imageFileName?: string;
   }) => data)
@@ -104,14 +104,14 @@ export const updateProduct = createServerFn({ method: "POST" })
     await requireAdmin();
 
     const update: Record<string, unknown> = {
-  sku: data.sku,
-  name: data.name,
-  price: data.price,
-  category: data.category,
-  gender: data.gender,
-  alt: data.alt,
-  stock: data.stock,   // ← πρόσθεσέ το
-};
+      sku: data.sku,
+      name: data.name,
+      price: data.price,
+      category: data.category,
+      gender: data.gender,
+      alt: data.alt,
+      stocks: data.stocks,
+    };
 
     if (data.imageBase64 && data.imageFileName) {
       const match = data.imageBase64.match(/^data:(.+);base64,(.+)$/);

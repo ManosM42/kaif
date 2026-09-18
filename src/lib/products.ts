@@ -7,5 +7,5 @@ export type Product = {
   gender: "men" | "women" | "unisex";
   image: string;
   alt: string;
-  stock: number;
+  stocks: Record<string, number>;
 };

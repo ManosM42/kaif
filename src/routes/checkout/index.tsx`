@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from "@stripe/react-stripe-js";
 import { useCart } from "@/lib/cart-context";
@@ -64,11 +64,6 @@ function CheckoutPage() {
   }
 
   async function proceedToPayment() {
-    if (!import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY) {
-      setError("Σφάλμα: Λείπει το Stripe Publishable Key. Παρακαλώ επικοινωνήστε με τον διαχειριστή.");
-      return;
-    }
-
     setLoading(true);
     setError(null);
     try {
@@ -91,12 +86,11 @@ function CheckoutPage() {
           },
         },
       });
-      if (!res.clientSecret) throw new Error("Αποτυχία δημιουργίας checkout session: Δεν ελήφθη clientSecret");
+      if (!res.clientSecret) throw new Error("Αποτυχία δημιουργίας checkout session");
       setClientSecret(res.clientSecret);
       setStep(3);
     } catch (err) {
-      console.error("Checkout Session Error:", err);
-      setError(err instanceof Error ? err.message : "Κάτι πήγε στραβά κατά τη δημιουργία της πληρωμής");
+      setError(err instanceof Error ? err.message : "Κάτι πήγε στραβά");
     } finally {
       setLoading(false);
     }
@@ -289,10 +283,7 @@ function CheckoutPage() {
               animate={{ opacity: 1, y: 0 }}
               className="min-h-[500px]"
             >
-              <EmbeddedCheckoutProvider
-                stripe={stripePromise}
-                options={{ fetchClientSecret: async () => clientSecret || "" }}
-              >
+              <EmbeddedCheckoutProvider stripe={stripePromise} options={{ fetchClientSecret: async () => clientSecret! }}>
                 <EmbeddedCheckout />
               </EmbeddedCheckoutProvider>
             </motion.div>

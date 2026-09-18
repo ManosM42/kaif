@@ -220,6 +220,10 @@ function ProductModal({
 
   function handleAddToBag() {
     if (!size || !product) return;
+
+    const stockForSize = product.stocks[size] ?? 0;
+    if (stockForSize <= 0) return;
+
     addItem({
       productId: product.id,
       sku: product.sku,
@@ -296,26 +300,45 @@ function ProductModal({
                   SIZE
                 </p>
                 <div className="flex gap-2">
-                  {SIZES.map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => setSize(s)}
-                      className={`h-10 w-12 border font-mono text-xs transition ${
-                        size === s
-                          ? "border-kaif-toxic text-kaif-toxic"
-                          : "border-white/15 text-kaif-chrome hover:border-kaif-chrome"
-                      }`}
-                    >
-                      {s}
-                    </button>
-                  ))}
+                  {SIZES.map((s) => {
+                    const stock = product.stocks[s] ?? 0;
+                    const isOutOfStock = stock <= 0;
+                    return (
+                      <button
+                        key={s}
+                        onClick={() => setSize(s)}
+                        disabled={isOutOfStock}
+                        className={`h-10 w-12 border font-mono text-xs transition ${
+                          size === s
+                            ? "border-kaif-toxic text-kaif-toxic"
+                            : isOutOfStock
+                            ? "border-white/5 text-white/20 cursor-not-allowed"
+                            : "border-white/15 text-kaif-chrome hover:border-kaif-chrome"
+                        }`}
+                      >
+                        {s}
+                      </button>
+                    );
+                  })}
                 </div>
+                {size && (
+                  <p className={`mt-2 font-mono text-[9px] tracking-[0.1em] ${
+                    (product.stocks[size] ?? 0) > 0
+                      ? "text-kaif-chrome-dim"
+                      : "text-red-500"
+                  }`}>
+                    { (product.stocks[size] ?? 0) > 0
+                      ? `${product.stocks[size]} left in stock`
+                      : "SOLD OUT"
+                    }
+                  </p>
+                )}
               </div>
 
               <motion.button
                 whileTap={{ scale: 0.97 }}
                 onClick={handleAddToBag}
-                disabled={!size}
+                disabled={!size || (product.stocks[size] ?? 0) <= 0}
                 className={`mt-auto border py-4 font-mono text-xs tracking-[0.4em] transition disabled:cursor-not-allowed disabled:opacity-40 ${
                   added
                     ? "border-kaif-toxic bg-kaif-toxic text-kaif-black"

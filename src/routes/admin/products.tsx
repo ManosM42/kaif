@@ -29,7 +29,7 @@ type FormState = {
   category: Product["category"];
   gender: Product["gender"];
   alt: string;
-  stock: string;   // ← νέο
+  stocks: Record<string, string>;
 };
 
 const EMPTY_FORM: FormState = {
@@ -40,7 +40,13 @@ const EMPTY_FORM: FormState = {
   category: "tops",
   gender: "unisex",
   alt: "",
-  stock: "0",   // ← νέο
+  stocks: {
+    XS: "0",
+    S: "0",
+    M: "0",
+    L: "0",
+    XL: "0",
+  },
 };
 
 function fileToBase64(file: File): Promise<string> {
@@ -88,16 +94,18 @@ function ProductsAdmin() {
   }
 
   function startEdit(p: Product) {
-  setForm({
-    id: p.id,
-    sku: p.sku,
-    name: p.name,
-    price: String(p.price),
-    category: p.category,
-    gender: p.gender,
-    alt: p.alt,
-    stock: String(p.stock),   // ← νέο
-  });
+    setForm({
+      id: p.id,
+      sku: p.sku,
+      name: p.name,
+      price: String(p.price),
+      category: p.category,
+      gender: p.gender,
+      alt: p.alt,
+      stocks: Object.fromEntries(
+        Object.entries(p.stocks).map(([s, v]) => [s, String(v)])
+      ),
+    });
     setImageFile(null);
     setImagePreview(p.image || null);
     setError(null);
@@ -120,69 +128,79 @@ function ProductsAdmin() {
   }
 
   async function handleSubmit(e: FormEvent) {
-  e.preventDefault();
-  setError(null);
+    e.preventDefault();
+    setError(null);
 
-  const price = parseFloat(form.price);
-  const stock = parseInt(form.stock, 10);
-  if (!form.sku.trim() || !form.name.trim() || Number.isNaN(price) || Number.isNaN(stock) || stock < 0) {
-    setError("Συμπλήρωσε SKU, όνομα, έγκυρη τιμή και έγκυρο stock (≥ 0).");
-    return;
-  }
-  if (!isEditing && !imageFile) {
-    setError("Χρειάζεται εικόνα για νέο προϊόν.");
-    return;
-  }
-
-  setBusy(true);
-  try {
-    let imageBase64: string | undefined;
-    let imageFileName: string | undefined;
-    if (imageFile) {
-      imageBase64 = await fileToBase64(imageFile);
-      imageFileName = imageFile.name;
+    const price = parseFloat(form.price);
+    const stocks: Record<string, number> = {};
+    let hasInvalidStock = false;
+    for (const [s, v] of Object.entries(form.stocks)) {
+      const val = parseInt(v, 10);
+      if (Number.isNaN(val) || val < 0) {
+        hasInvalidStock = true;
+        break;
+      }
+      stocks[s] = val;
     }
 
-    if (isEditing) {
-      await updateProduct({
-        data: {
-          id: form.id!,
-          sku: form.sku.trim(),
-          name: form.name.trim(),
-          price,
-          category: form.category,
-          gender: form.gender,
-          alt: form.alt.trim() || form.name.trim(),
-          stock,
-          imageBase64,
-          imageFileName,
-        },
-      });
-    } else {
-      await createProduct({
-        data: {
-          sku: form.sku.trim(),
-          name: form.name.trim(),
-          price,
-          category: form.category,
-          gender: form.gender,
-          alt: form.alt.trim() || form.name.trim(),
-          stock,
-          imageBase64: imageBase64!,
-          imageFileName: imageFileName!,
-        },
-      });
+    if (!form.sku.trim() || !form.name.trim() || Number.isNaN(price) || hasInvalidStock) {
+      setError("Συμπλήρωσε SKU, όνομα, έγκυρη τιμή και έγκυρο stock (≥ 0) για όλα τα μεγέθη.");
+      return;
+    }
+    if (!isEditing && !imageFile) {
+      setError("Χρειάζεται εικόνα για νέο προϊόν.");
+      return;
     }
 
-    await refresh();
-    resetForm();
-  } catch (err) {
-    console.error(err);
-    setError(err instanceof Error ? err.message : "Κάτι πήγε στραβά.");
-  } finally {
-    setBusy(false);
+    setBusy(true);
+    try {
+      let imageBase64: string | undefined;
+      let imageFileName: string | undefined;
+      if (imageFile) {
+        imageBase64 = await fileToBase64(imageFile);
+        imageFileName = imageFile.name;
+      }
+
+      if (isEditing) {
+        await updateProduct({
+          data: {
+            id: form.id!,
+            sku: form.sku.trim(),
+            name: form.name.trim(),
+            price,
+            category: form.category,
+            gender: form.gender,
+            alt: form.alt.trim() || form.name.trim(),
+            stocks,
+            imageBase64,
+            imageFileName,
+          },
+        });
+      } else {
+        await createProduct({
+          data: {
+            sku: form.sku.trim(),
+            name: form.name.trim(),
+            price,
+            category: form.category,
+            gender: form.gender,
+            alt: form.alt.trim() || form.name.trim(),
+            stocks,
+            imageBase64: imageBase64!,
+            imageFileName: imageFileName!,
+          },
+        });
+      }
+
+      await refresh();
+      resetForm();
+    } catch (err) {
+      console.error(err);
+      setError(err instanceof Error ? err.message : "Κάτι πήγε στραβά.");
+    } finally {
+      setBusy(false);
+    }
   }
-}
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-16 text-white">
@@ -251,20 +269,32 @@ function ProductsAdmin() {
               className="w-full border border-white/20 bg-transparent px-3 py-2 text-white"
             />
           </div>
-          <div>
-  <label className="mb-1 block font-mono text-[10px] tracking-[0.2em] text-kaif-chrome-dim">
-    STOCK (τεμάχια)
-  </label>
-  <input
-    type="number"
-    step="1"
-    min="0"
-    value={form.stock}
-    onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))}
-    placeholder="12"
-    className="w-full border border-white/20 bg-transparent px-3 py-2 text-white"
-  />
-</div>
+
+          <div className="md:col-span-2">
+            <label className="mb-3 block font-mono text-[10px] tracking-[0.2em] text-kaif-chrome-dim">
+              STOCK PER SIZE (τεμάχια)
+            </label>
+            <div className="grid grid-cols-5 gap-2">
+              {["XS", "S", "M", "L", "XL"].map((s) => (
+                <div key={s} className="flex flex-col gap-1">
+                  <span className="text-center font-mono text-[9px] text-kaif-chrome-dim">{s}</span>
+                  <input
+                    type="number"
+                    step="1"
+                    min="0"
+                    value={form.stocks[s] || "0"}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        stocks: { ...f.stocks, [s]: e.target.value },
+                      }))
+                    }
+                    className="w-full border border-white/20 bg-transparent px-2 py-1 text-center text-white font-mono text-xs"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
 
           <div>
             <label className="mb-1 block font-mono text-[10px] tracking-[0.2em] text-kaif-chrome-dim">
@@ -297,7 +327,6 @@ function ProductsAdmin() {
               ))}
             </select>
           </div>
-          
 
           <div>
             <label className="mb-1 block font-mono text-[10px] tracking-[0.2em] text-kaif-chrome-dim">
@@ -391,37 +420,40 @@ function ProductsAdmin() {
         {products.length === 0 && (
           <p className="font-mono text-xs text-kaif-chrome-dim">Δεν υπάρχουν προϊόντα ακόμα.</p>
         )}
-        {products.map((p) => (
-          <div
-            key={p.id}
-            className="flex items-center gap-4 border border-white/10 p-4"
-          >
-            <img src={p.image} alt={p.alt} className="h-16 w-16 flex-shrink-0 object-cover" />
-            <div className="flex-1">
-              <p className="font-mono text-[10px] tracking-[0.2em] text-kaif-chrome-dim">
-                {p.sku} · {p.category} · {p.gender}
-              </p>
-              <p className="font-mono text-sm text-white">{p.name}</p>
-              <p className="font-mono text-xs text-kaif-toxic">€{p.price}</p>
-              <p className="font-mono text-xs text-kaif-toxic">
-  €{p.price} · {p.stock > 0 ? `${p.stock} τεμ.` : "SOLD OUT"}
-</p>
+        {products.map((p) => {
+          const totalStock = Object.values(p.stocks).reduce((a, b) => a + b, 0);
+          return (
+            <div
+              key={p.id}
+              className="flex items-center gap-4 border border-white/10 p-4"
+            >
+              <img src={p.image} alt={p.alt} className="h-16 w-16 flex-shrink-0 object-cover" />
+              <div className="flex-1">
+                <p className="font-mono text-[10px] tracking-[0.2em] text-kaif-chrome-dim">
+                  {p.sku} · {p.category} · {p.gender}
+                </p>
+                <p className="font-mono text-sm text-white">{p.name}</p>
+                <p className="font-mono text-xs text-kaif-toxic">€{p.price}</p>
+                <p className="font-mono text-xs text-kaif-toxic">
+                  €{p.price} · {totalStock > 0 ? `${totalStock} τεμ.` : "SOLD OUT"}
+                </p>
+              </div>
+              <button
+                onClick={() => startEdit(p)}
+                className="border border-white/20 px-4 py-2 font-mono text-[10px] tracking-[0.2em] text-kaif-chrome-dim hover:border-kaif-chrome hover:text-kaif-chrome"
+              >
+                ΕΠΕΞΕΡΓΑΣΙΑ
+              </button>
+              <button
+                onClick={() => handleDelete(p.id)}
+                disabled={busy}
+                className="border border-red-500/40 px-4 py-2 font-mono text-[10px] tracking-[0.2em] text-red-500 hover:bg-red-500 hover:text-black disabled:opacity-50"
+              >
+                ΔΙΑΓΡΑΦΗ
+              </button>
             </div>
-            <button
-              onClick={() => startEdit(p)}
-              className="border border-white/20 px-4 py-2 font-mono text-[10px] tracking-[0.2em] text-kaif-chrome-dim hover:border-kaif-chrome hover:text-kaif-chrome"
-            >
-              ΕΠΕΞΕΡΓΑΣΙΑ
-            </button>
-            <button
-              onClick={() => handleDelete(p.id)}
-              disabled={busy}
-              className="border border-red-500/40 px-4 py-2 font-mono text-[10px] tracking-[0.2em] text-red-500 hover:bg-red-500 hover:text-black disabled:opacity-50"
-            >
-              ΔΙΑΓΡΑΦΗ
-            </button>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

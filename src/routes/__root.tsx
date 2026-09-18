@@ -19,6 +19,7 @@ import { GrainOverlay } from "../components/GrainOverlay";
 import { LoadingOverlay } from "../components/LoadingOverlay";
 import { CartProvider } from "@/lib/cart-context";
 import { CartButton, CartDrawer } from "@/components/Cart";
+import { CookieBanner } from "@/components/CookieBanner";
 
 function NotFoundComponent() {
   return (
@@ -158,6 +159,7 @@ function AnimatedShell() {
       </main>
       <Footer />
       <GrainOverlay />
+      <CookieBanner />
       <AnimatePresence>{isNavigating && <LoadingOverlay />}</AnimatePresence>
     </>
   );
