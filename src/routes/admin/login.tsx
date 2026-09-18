@@ -14,14 +14,23 @@ function AdminLogin() {
   const navigate = useNavigate();
 
   async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
+  e.preventDefault();
+  setLoading(true);
+  setError(null);
+  try {
     const res = await loginAdmin({ data: { email, password } });
+    if (res.ok) {
+      navigate({ to: "/admin" });
+      return; // keep loading=true through the redirect, avoids a flash back to enabled button
+    }
+    setError(res.error ?? "Κάτι πήγε στραβά");
+  } catch (err) {
+    console.error(err);
+    setError("Σφάλμα διακομιστή. Δοκίμασε ξανά.");
+  } finally {
     setLoading(false);
-    if (res.ok) navigate({ to: "/admin" });
-    else setError(res.error ?? "Κάτι πήγε στραβά");
   }
+}
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-kaif-black px-4">
