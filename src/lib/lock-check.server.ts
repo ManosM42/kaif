@@ -1,5 +1,5 @@
 import { supabaseAdmin } from "./supabase-admin.server";
-import { verifyAdminSession } from "./auth.functions";
+import { verifyAdminSession } from "./auth.server";
 import kaifLogoUrl from "@/assets/kaif-logo.jpg?url";
 
 let cache: { locked: boolean; ts: number } | null = null;

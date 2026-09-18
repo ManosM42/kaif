@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { supabaseAdmin } from "./supabase-admin.server";
-import { verifyAdminSession } from "./auth.functions";
+import { verifyAdminSession } from "./auth.server";
 import { invalidateLockCache } from "./lock-check.server";
 
 async function requireAdmin() {
