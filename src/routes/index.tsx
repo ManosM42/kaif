@@ -12,6 +12,35 @@ export const Route = createFileRoute("/")({
   component: Home,
 });
 
+/* Layout slots for the featured grid (same layout as before for 4 products) */
+const SLOTS = [
+  { wrap: "col-span-12 md:col-span-7", aspect: "wide", delay: 0 },
+  { wrap: "col-span-6 md:col-span-5 md:mt-24", aspect: "tall", delay: 0.1 },
+  { wrap: "col-span-6 md:col-span-4", aspect: undefined, delay: 0.15 },
+  { wrap: "col-span-12 md:col-span-8 md:mt-16", aspect: "wide", delay: 0.2 },
+] as const;
+
+/* Picks the layout for each card, adjusting so 1 or 3 products still look balanced */
+function getSlot(index: number, total: number) {
+  // Only one product: show it centered
+  if (total === 1) {
+    return {
+      wrap: "col-span-12 md:col-span-6 md:col-start-4",
+      aspect: "wide" as const,
+      delay: 0,
+    };
+  }
+  // Three products: center the last one instead of leaving an empty gap
+  if (total === 3 && index === 2) {
+    return {
+      wrap: "col-span-12 md:col-span-6 md:col-start-4 md:mt-16",
+      aspect: "wide" as const,
+      delay: 0.15,
+    };
+  }
+  return SLOTS[index];
+}
+
 function Home() {
   const products = Route.useLoaderData();
 
@@ -31,10 +60,11 @@ function Home() {
   });
   const lbY = useTransform(lbProgress, [0, 1], [-80, 80]);
 
-  if (products.length < 4) {
+  // Only show the placeholder when there are no products at all
+  if (products.length < 1) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-kaif-black px-4 text-center font-mono text-xs tracking-[0.3em] text-kaif-chrome-dim">
-        ADD AT LEAST 4 PRODUCTS IN ADMIN
+        ADD A PRODUCT IN ADMIN
       </div>
     );
   }
@@ -150,48 +180,36 @@ function Home() {
               </h2>
             </div>
             <span className="hidden font-mono text-[10px] tracking-[0.3em] text-kaif-chrome-dim md:inline">
-              04 / OF 12
+              {String(featured.length).padStart(2, "0")} / OF{" "}
+              {String(products.length).padStart(2, "0")}
             </span>
           </div>
 
           {/* Asymmetric editorial grid */}
           <div className="grid grid-cols-12 gap-4 md:gap-6">
-            <motion.div
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.2 }}
-              transition={{ duration: 0.7 }}
-              className="col-span-12 md:col-span-7"
-            >
-              <ProductCard product={featured[0]} hoverImage={featured[1].image} aspect="wide" />
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.2 }}
-              transition={{ duration: 0.7, delay: 0.1 }}
-              className="col-span-6 md:col-span-5 md:mt-24"
-            >
-              <ProductCard product={featured[1]} hoverImage={featured[2].image} aspect="tall" />
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.2 }}
-              transition={{ duration: 0.7, delay: 0.15 }}
-              className="col-span-6 md:col-span-4"
-            >
-              <ProductCard product={featured[2]} hoverImage={featured[3].image} />
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.2 }}
-              transition={{ duration: 0.7, delay: 0.2 }}
-              className="col-span-12 md:col-span-8 md:mt-16"
-            >
-              <ProductCard product={featured[3]} hoverImage={featured[0].image} aspect="wide" />
-            </motion.div>
+            {featured.map((product, i) => {
+              const slot = getSlot(i, featured.length);
+              // Hover image = next product's image (loops back to the first).
+              // With a single product it just uses its own image.
+              const hoverImage = featured[(i + 1) % featured.length].image;
+
+              return (
+                <motion.div
+                  key={product.id}
+                  initial={{ opacity: 0, y: 40 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.2 }}
+                  transition={{ duration: 0.7, delay: slot.delay }}
+                  className={slot.wrap}
+                >
+                  <ProductCard
+                    product={product}
+                    hoverImage={hoverImage}
+                    aspect={slot.aspect}
+                  />
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       </section>
