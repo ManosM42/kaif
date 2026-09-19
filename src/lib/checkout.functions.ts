@@ -59,23 +59,32 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       });
     }
 
-    const origin = process.env.SITE_URL || "http://localhost:3001";
+    // Remove any trailing slash from SITE_URL, otherwise the return URL becomes
+    // "https://site.com//checkout/success" (double slash) and the page 404s.
+    const origin = (process.env.SITE_URL || "http://localhost:3001").replace(/\/+$/, "");
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       ui_mode: "embedded",
       line_items,
       customer_email: data.customer.email,
-      shipping: {
-        name: data.shipping.name,
-        address: {
-          line1: data.shipping.address,
-          city: data.shipping.city,
-          postal_code: data.shipping.postal_code,
-          country: data.shipping.country,
-          state: data.shipping.state,
+
+      // FIX: `shipping` is not a valid top-level parameter for Checkout Sessions.
+      // The shipping details belong inside `payment_intent_data`.
+      payment_intent_data: {
+        shipping: {
+          name: data.shipping.name,
+          phone: data.customer.phone || undefined,
+          address: {
+            line1: data.shipping.address,
+            city: data.shipping.city,
+            postal_code: data.shipping.postal_code,
+            country: data.shipping.country, // must be a 2-letter code: "GR", "DE", "US"...
+            state: data.shipping.state || undefined, // avoid sending an empty string
+          },
         },
       },
+
       return_url: `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       metadata: {
         cart: JSON.stringify(data.items),
