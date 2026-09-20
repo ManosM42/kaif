@@ -167,7 +167,7 @@ export function renderLockedPage(): Response {
     <p class="status">● Signal Standby</p>
     <img src="${kaifLogoUrl}" alt="KAIF" class="logo-img" />
     <div class="divider"></div>
-    <p class="message">Opening Soon</p>
+    <p class="message">Drop 001: Opening Soon</p>
   </div>
 </body>
 </html>`;

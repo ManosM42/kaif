@@ -173,7 +173,7 @@ function Home() {
           <div className="mb-16 flex items-end justify-between">
             <div>
               <p className="font-mono text-[10px] tracking-[0.4em] text-kaif-toxic">
-                // 02 — CURRENT RUN
+                // 01 — CURRENT RUN
               </p>
               <h2 className="mt-4 font-display text-5xl leading-none tracking-tight text-kaif-chrome md:text-7xl">
                 Featured Drops
